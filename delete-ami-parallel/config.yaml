@@ -30,3 +30,7 @@ duration:
 # AWS user profile ID.
 aws_user_id:
   - xxxxxxxxxxxx
+
+# Log location
+log_location:
+  - deregisterami.log
