@@ -7,23 +7,22 @@ exclude_ami:
 dryrun: true
 
 # AWS region to connect to.
-aws_region:
-  - ap-southeast-1
+aws_region: ap-southeast-1
 
 # AWS credential file location.
-aws_credential_file: /Users/abhishek.b/.aws/config
+aws_credential_file: /Users/xxxxx/.aws/config
 
 # AWS profile to connect as defined in aws_credential_file.
 aws_credential_profile: default
 
 # Number of goroutines to run in parallel which will deregister ami.
-no_of_executer: 6
+no_of_executer: 12
 
 # In seconds. AMI older than this duration will be deregistered.
 duration: 604800
 
 # AWS user profile ID of the IAM user.
-aws_user_id: 111111111
+aws_user_id: 11111111111
 
 # Log location
 log_location: deregisterami.log

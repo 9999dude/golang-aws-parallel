@@ -8,23 +8,22 @@ import (
 	"strings"
 	"time"
 
-	"gopkg.in/yaml.v2"
-
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/aws/credentials"
 	"github.com/aws/aws-sdk-go/aws/session"
 	"github.com/aws/aws-sdk-go/service/ec2"
+	"gopkg.in/yaml.v2"
 )
 
 //YAMLConfig .. Structure of YAMLConfig type to read yaml data.
 type YAMLConfig struct {
 	Exclude_ami            []string
-	Aws_region             []string
+	Aws_region             string
 	Aws_credential_file    string
 	Aws_credential_profile string
 	No_of_executer         int
 	Duration               int
-	Aws_user_id            int
+	Aws_user_id            string
 	Dryrun                 bool
 	Log_location           string
 }
@@ -32,19 +31,19 @@ type YAMLConfig struct {
 //WorkerPool .. This function will create worker pool of go routines. It takes data from jobs channel and
 //assignes it to a goroutine. Once the task is done by the goroutine, the result is written to results
 //channel. Number of goroutine in the worker pool is controlled by the calling function, i.e. main() here.
-func WorkerPool(id int, jobs <-chan string, results chan<- string, svc *ec2.EC2) {
+func WorkerPool(id int, jobs <-chan string, results chan<- string, svc *ec2.EC2, DryRun bool) {
 	for j := range jobs {
 		fmt.Println("Goroutine id.", id, "deregistering ami id.", j)
-		DeregisterAmi(j, svc)
+		DeregisterAmi(j, svc, DryRun)
 		results <- j
 	}
 }
 
 //DeregisterAmi .. Code to deregister ami.
-func DeregisterAmi(amiID string, svc *ec2.EC2) {
+func DeregisterAmi(amiID string, svc *ec2.EC2, DryRun bool) {
 	params := &ec2.DeregisterImageInput{
 		ImageId: aws.String(amiID),
-		DryRun:  aws.Bool(true),
+		DryRun:  aws.Bool(DryRun),
 	}
 	_, err := svc.DeregisterImage(params)
 
@@ -65,19 +64,8 @@ func AmiCheck(AmiID string, yamlconfig YAMLConfig) bool {
 }
 
 func main() {
-	const (
-		awsRegion            = "ap-southeast-1"
-		awsCredentialFile    = "/Users/abhishek.b/.aws/config"
-		awsCredentialProfile = "default"
-	)
-
-	var duration = flag.Int("duration", 604800, "In seconds. AMI older than this duration will be terminated")
-	var config = flag.String("config", "config.yaml", "Ami to exclude should be put in this file")
-	var executer = flag.Int("executer", 4, "Number of goroutines to run in a worker pool. By default, running 4 goroutines")
+	var config = flag.String("config", "config.yaml", "Config file path. Please copy the config.yaml to the appropriate path.")
 	flag.Parse()
-
-	delta := int64(*duration)
-	t := time.Now().Unix()
 
 	//Parsing yaml data
 	var yamlconfig YAMLConfig
@@ -89,17 +77,21 @@ func main() {
 	if FileErr != nil {
 		panic(FileErr)
 	}
-	DryRun = yamlconfig.dryrun
-	AWSRegion = yamlconfig.
-	AWSCredentialFile = yamlconfig.
-	aws_credential_profile = yamlconfig.
-	no_of_executer = yamlconfig.
-	duration = yamlconfig.
-	aws_user_id = yamlconfig.
-	log_location = yamlconfig.
+	DryRun := yamlconfig.Dryrun
+	AWSRegion := yamlconfig.Aws_region
+	AWSCredentialFile := yamlconfig.Aws_credential_file
+	AWSCredentialProfile := yamlconfig.Aws_credential_profile
+	NoOfExecuter := yamlconfig.No_of_executer
+	Duration := yamlconfig.Duration
+	AWSUserID := yamlconfig.Aws_user_id
+	//LogLocation := yamlconfig.Log_location
+	//fmt.Println(DryRun, AWSRegion, AWSCredentialFile, AWSCredentialProfile, NoOfExecuter, Duration, AWSUserID, LogLocation)
+
+	delta := int64(Duration)
+	t := time.Now().Unix()
 
 	//Load aws iam credentials
-	creds := credentials.NewSharedCredentials(awsCredentialFile, awsCredentialProfile)
+	creds := credentials.NewSharedCredentials(AWSCredentialFile, AWSCredentialProfile)
 	_, err := creds.Get()
 	if err != nil {
 		fmt.Println(err)
@@ -108,13 +100,13 @@ func main() {
 
 	// Create an EC2 service object
 	svc := ec2.New(session.New(), &aws.Config{
-		Region:      aws.String(awsRegion),
+		Region:      aws.String(AWSRegion),
 		Credentials: creds,
 	})
 
 	paramsImage := &ec2.DescribeImagesInput{
 		Owners: []*string{
-			aws.String("xxxxxxxxxxxx"),
+			aws.String(AWSUserID),
 		},
 	}
 	resp, err := svc.DescribeImages(paramsImage)
@@ -125,8 +117,8 @@ func main() {
 	//Creating worker job pool. Number of goroutines to run is configured by -executer command line parameter.
 	jobs := make(chan string)
 	results := make(chan string)
-	for w := 1; w <= *executer; w++ {
-		go WorkerPool(w, jobs, results, svc)
+	for w := 1; w <= NoOfExecuter; w++ {
+		go WorkerPool(w, jobs, results, svc, DryRun)
 	}
 
 	for _, image := range resp.Images {
