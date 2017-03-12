@@ -20,13 +20,13 @@ import (
 type YAMLConfig struct {
 	Exclude_ami            []string
 	Aws_region             []string
-	Aws_credential_file    []string
-	Aws_credential_profile []string
-	No_of_executer         []string
-	Duration               []string
-	Aws_user_id            []string
-	Dryrun                 []string
-	Log_location           []string
+	Aws_credential_file    string
+	Aws_credential_profile string
+	No_of_executer         int
+	Duration               int
+	Aws_user_id            int
+	Dryrun                 bool
+	Log_location           string
 }
 
 //WorkerPool .. This function will create worker pool of go routines. It takes data from jobs channel and
@@ -40,7 +40,7 @@ func WorkerPool(id int, jobs <-chan string, results chan<- string, svc *ec2.EC2)
 	}
 }
 
-//DeregisterAmi .. Code to deregister an ami.
+//DeregisterAmi .. Code to deregister ami.
 func DeregisterAmi(amiID string, svc *ec2.EC2) {
 	params := &ec2.DeregisterImageInput{
 		ImageId: aws.String(amiID),
@@ -123,12 +123,13 @@ func main() {
 	}
 
 	for _, image := range resp.Images {
+		// Check if ami is listed in the exclustion list.
 		status := AmiCheck(*image.ImageId, yamlconfig)
 		if status {
 			continue
 		}
 
-		//Next three line of code is required as bloody amazon is returning *image.CreationDate
+		//Next three line of code is required as bloody Amazon is returning *image.CreationDate
 		//as string instead of time.Time object
 		Date := strings.Split(strings.Split(*image.CreationDate, ".")[0], "T")[0] + " " + strings.Split(strings.Split(*image.CreationDate, ".")[0], "T")[1]
 		datetime, _ := time.Parse("2006-01-02 15:04:05", Date)
