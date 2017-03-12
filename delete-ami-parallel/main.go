@@ -25,6 +25,7 @@ type YAMLConfig struct {
 	No_of_executer         []string
 	Duration               []string
 	Aws_user_id            []string
+	Dryrun                 []string
 }
 
 //WorkerPool .. This function will create worker pool of go routines. It takes data from jobs channel and

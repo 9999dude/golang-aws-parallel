@@ -3,6 +3,10 @@ exclude_ami:
   - ami-ef5c808c
   - ami-ff89529c
 
+# Dryrun flag set to true. Set it to false to make changes in your infrastructure.
+dryrun:
+  - true
+
 # AWS region to connect to.
 aws_region:
   - ap-southeast-1
