@@ -74,7 +74,6 @@ func main() {
 	var duration = flag.Int("duration", 604800, "In seconds. AMI older than this duration will be terminated")
 	var config = flag.String("config", "config.yaml", "Ami to exclude should be put in this file")
 	var executer = flag.Int("executer", 4, "Number of goroutines to run in a worker pool. By default, running 4 goroutines")
-
 	flag.Parse()
 
 	delta := int64(*duration)
@@ -90,6 +89,14 @@ func main() {
 	if FileErr != nil {
 		panic(FileErr)
 	}
+	DryRun = yamlconfig.dryrun
+	AWSRegion = yamlconfig.
+	AWSCredentialFile = yamlconfig.
+	aws_credential_profile = yamlconfig.
+	no_of_executer = yamlconfig.
+	duration = yamlconfig.
+	aws_user_id = yamlconfig.
+	log_location = yamlconfig.
 
 	//Load aws iam credentials
 	creds := credentials.NewSharedCredentials(awsCredentialFile, awsCredentialProfile)
