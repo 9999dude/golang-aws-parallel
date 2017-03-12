@@ -16,9 +16,15 @@ import (
 	"github.com/aws/aws-sdk-go/service/ec2"
 )
 
-//Config .. Structure of Config type to read yaml data.
-type Config struct {
-	Amiid []string
+//YAMLConfig .. Structure of YAMLConfig type to read yaml data.
+type YAMLConfig struct {
+	Exclude_ami            []string
+	Aws_region             []string
+	Aws_credential_file    []string
+	Aws_credential_profile []string
+	No_of_executer         []string
+	Duration               []string
+	Aws_user_id            []string
 }
 
 //WorkerPool .. This function will create worker pool of go routines. It takes data from jobs channel and
@@ -36,7 +42,7 @@ func WorkerPool(id int, jobs <-chan string, results chan<- string, svc *ec2.EC2)
 func DeregisterAmi(amiID string, svc *ec2.EC2) {
 	params := &ec2.DeregisterImageInput{
 		ImageId: aws.String(amiID),
-		//DryRun:  aws.Bool(true),
+		DryRun:  aws.Bool(true),
 	}
 	_, err := svc.DeregisterImage(params)
 
@@ -47,8 +53,8 @@ func DeregisterAmi(amiID string, svc *ec2.EC2) {
 }
 
 //AmiCheck .. Returns true if the ami id is in the exclusion list (in the yaml).
-func AmiCheck(AmiID string, config Config) bool {
-	for _, b := range config.Amiid {
+func AmiCheck(AmiID string, yamlconfig YAMLConfig) bool {
+	for _, b := range yamlconfig.Exclude_ami {
 		if b == AmiID {
 			return true
 		}
@@ -59,12 +65,12 @@ func AmiCheck(AmiID string, config Config) bool {
 func main() {
 	const (
 		awsRegion            = "ap-southeast-1"
-		awsCredentialFile    = "/root/.aws/config"
+		awsCredentialFile    = "/Users/abhishek.b/.aws/config"
 		awsCredentialProfile = "default"
 	)
 
 	var duration = flag.Int("duration", 604800, "In seconds. AMI older than this duration will be terminated")
-	var exclude = flag.String("exclude", "exclude.yaml", "Ami to exclude should be put in this file")
+	var config = flag.String("config", "config.yaml", "Ami to exclude should be put in this file")
 	var executer = flag.Int("executer", 4, "Number of goroutines to run in a worker pool. By default, running 4 goroutines")
 
 	flag.Parse()
@@ -73,13 +79,12 @@ func main() {
 	t := time.Now().Unix()
 
 	//Parsing yaml data
-	var config Config
-	fmt.Println(*exclude)
-	source, FileErr := ioutil.ReadFile(*exclude)
+	var yamlconfig YAMLConfig
+	source, FileErr := ioutil.ReadFile(*config)
 	if FileErr != nil {
 		panic(FileErr)
 	}
-	FileErr = yaml.Unmarshal(source, &config)
+	FileErr = yaml.Unmarshal(source, &yamlconfig)
 	if FileErr != nil {
 		panic(FileErr)
 	}
@@ -116,7 +121,7 @@ func main() {
 	}
 
 	for _, image := range resp.Images {
-		status := AmiCheck(*image.ImageId, config)
+		status := AmiCheck(*image.ImageId, yamlconfig)
 		if status {
 			continue
 		}

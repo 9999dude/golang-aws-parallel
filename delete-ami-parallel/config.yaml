@@ -1,0 +1,28 @@
+# Ami's to exclude from deregisteration.
+exclude_ami:
+  - ami-ef5c808c
+  - ami-ff89529c
+
+# AWS region to connect to.
+aws_region:
+  - ap-southeast-1
+
+# AWS credential file location.
+aws_credential_file:
+  - /Users/abhishek.b/.aws/config
+
+# AWS profile to connect as defined in aws_credential_file.
+aws_credential_profile:
+  - default
+
+# Number of goroutines to run in parallel which will deregister ami.
+no_of_executer:
+  - 6
+
+# In seconds. AMI older than this duration will be deregistered.
+duration:
+  - 604800
+
+# AWS user profile ID.
+aws_user_id:
+  - xxxxxxxxxxxx
