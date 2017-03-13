@@ -2,8 +2,8 @@ package main
 
 import (
 	"flag"
-	"fmt"
 	"io/ioutil"
+	"log"
 	"os"
 	"strings"
 	"time"
@@ -23,17 +23,22 @@ type YAMLConfig struct {
 	Aws_credential_profile string
 	No_of_executer         int
 	Duration               int
-	Aws_user_id            string
+	Aws_account_id         string
 	Dryrun                 bool
 	Log_location           string
 }
+
+var (
+	Log        *log.Logger
+	yamlconfig YAMLConfig
+)
 
 //WorkerPool .. This function will create worker pool of go routines. It takes data from jobs channel and
 //assignes it to a goroutine. Once the task is done by the goroutine, the result is written to results
 //channel. Number of goroutine in the worker pool is controlled by the calling function, i.e. main() here.
 func WorkerPool(id int, jobs <-chan string, results chan<- string, svc *ec2.EC2, DryRun bool) {
 	for j := range jobs {
-		fmt.Println("Goroutine id.", id, "deregistering ami id.", j)
+		Log.Println("Goroutine id.", id, "deregistering ami id.", j)
 		DeregisterAmi(j, svc, DryRun)
 		results <- j
 	}
@@ -48,7 +53,7 @@ func DeregisterAmi(amiID string, svc *ec2.EC2, DryRun bool) {
 	_, err := svc.DeregisterImage(params)
 
 	if err != nil {
-		fmt.Println(err.Error())
+		Log.Println(err.Error())
 		return
 	}
 }
@@ -68,7 +73,6 @@ func main() {
 	flag.Parse()
 
 	//Parsing yaml data
-	var yamlconfig YAMLConfig
 	source, FileErr := ioutil.ReadFile(*config)
 	if FileErr != nil {
 		panic(FileErr)
@@ -83,9 +87,15 @@ func main() {
 	AWSCredentialProfile := yamlconfig.Aws_credential_profile
 	NoOfExecuter := yamlconfig.No_of_executer
 	Duration := yamlconfig.Duration
-	AWSUserID := yamlconfig.Aws_user_id
-	//LogLocation := yamlconfig.Log_location
-	//fmt.Println(DryRun, AWSRegion, AWSCredentialFile, AWSCredentialProfile, NoOfExecuter, Duration, AWSUserID, LogLocation)
+	AWSAccountID := yamlconfig.Aws_account_id
+	LogLocation := yamlconfig.Log_location
+
+	// Setting up log path.
+	file, FileErr := os.Create(LogLocation)
+	if FileErr != nil {
+		panic(FileErr)
+	}
+	Log = log.New(file, "", log.LstdFlags|log.Lshortfile)
 
 	delta := int64(Duration)
 	t := time.Now().Unix()
@@ -94,8 +104,7 @@ func main() {
 	creds := credentials.NewSharedCredentials(AWSCredentialFile, AWSCredentialProfile)
 	_, err := creds.Get()
 	if err != nil {
-		fmt.Println(err)
-		os.Exit(1)
+		panic(err)
 	}
 
 	// Create an EC2 service object
@@ -106,7 +115,7 @@ func main() {
 
 	paramsImage := &ec2.DescribeImagesInput{
 		Owners: []*string{
-			aws.String(AWSUserID),
+			aws.String(AWSAccountID),
 		},
 	}
 	resp, err := svc.DescribeImages(paramsImage)
@@ -135,13 +144,13 @@ func main() {
 		AMICreationDate := datetime.Unix()
 		if t-AMICreationDate > delta {
 			if image.Name == nil {
-				fmt.Println("Trying to deregister ami ", *image.CreationDate, *image.ImageId, "No name specified")
+				Log.Println("Trying to deregister ami ", *image.CreationDate, *image.ImageId, "No name specified")
 				go func(image *ec2.Image) {
 					jobs <- *image.ImageId
 				}(image)
 				<-results
 			} else {
-				fmt.Println("Trying to deregister ami ", *image.CreationDate, *image.ImageId, *image.Name)
+				Log.Println("Trying to deregister ami ", *image.CreationDate, *image.ImageId, *image.Name)
 				go func(image *ec2.Image) {
 					jobs <- *image.ImageId
 				}(image)

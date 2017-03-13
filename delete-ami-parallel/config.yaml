@@ -16,13 +16,13 @@ aws_credential_file: /Users/xxxxx/.aws/config
 aws_credential_profile: default
 
 # Number of goroutines to run in parallel which will deregister ami.
-no_of_executer: 12
+no_of_executer: 6
 
 # In seconds. AMI older than this duration will be deregistered.
 duration: 604800
 
 # AWS user profile ID of the IAM user.
-aws_user_id: 11111111111
+aws_account_id: 1111111111
 
 # Log location
-log_location: deregisterami.log
+log_location: /tmp/deregisterami.log
