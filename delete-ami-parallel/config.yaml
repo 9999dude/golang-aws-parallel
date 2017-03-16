@@ -1,0 +1,29 @@
+# Ami's to exclude from deregisteration.
+exclude_ami:
+  - ami-xxxxxxxx
+  - ami-yyyyyyyy
+
+# If dryrun flag set to true, it will not deregister ami. It will do a dry run and will tell you if the request
+# would have been successful or not. Make it false to deregister AMI's.
+dryrun: true
+
+# AWS region to connect to.
+aws_region: ap-southeast-1
+
+# AWS credential file location.
+aws_credential_file: /Users/xxxxx/.aws/config
+
+# AWS profile to connect as defined in aws_credential_file.
+aws_credential_profile: default
+
+# Number of goroutines to run in parallel which will deregister ami.
+no_of_executer: 6
+
+# In seconds. AMI's which are older than this duration will be deregistered.
+duration: 604800
+
+# AWS account ID.
+aws_account_id: 1111111111
+
+# Log location
+log_location: /tmp/deregisterami.log
