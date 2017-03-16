@@ -1,0 +1,24 @@
+# If dryrun flag set to true, it will not remove snapshot. It will do a dry run and will tell you if the request
+# would have been successful or not. Make it false to delete snapshots.
+dryrun: true
+
+# AWS region to connect to.
+aws_region: ap-southeast-1
+
+# AWS credential file location.
+aws_credential_file: /Users/xxxxx/.aws/config
+
+# AWS profile to connect as defined in aws_credential_file.
+aws_credential_profile: default
+
+# Number of goroutines to run in parallel which will delete snapshots.
+no_of_executer: 6
+
+# In seconds. Snapshots which are older than this duration will be deregistered.
+duration: 604800
+
+# AWS account ID.
+aws_account_id: 1111111111
+
+# Log location
+log_location: /tmp/deletesnapshots.log
