@@ -1,2 +1,2 @@
 ### Introduction
-This repository contains several projects to do parallel operations on AWS infrastructure. Please clone the respective projects and refer to the respective readme to know more about them.
+This repository contains several projects to do parallel operations on AWS infrastructure. Each folder contains a readme file giving description about the project.
