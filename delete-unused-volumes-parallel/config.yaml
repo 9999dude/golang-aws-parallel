@@ -18,4 +18,4 @@ no_of_executer: 6
 duration: 0
 
 # Log location
-log_location: /tmp/deletesnapshots.log
+log_location: /tmp/deleteunusedvolumes.log
