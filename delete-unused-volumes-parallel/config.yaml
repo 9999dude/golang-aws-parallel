@@ -1,0 +1,21 @@
+# If dryrun flag set to true, it will not delete unused volumes. It will do a dry run and will tell you if
+# the request would have been successful or not. Make it false to delete unused volumes.
+dryrun: true
+
+# AWS region to connect to.
+aws_region: ap-southeast-1
+
+# AWS credential file location.
+aws_credential_file: /Users/xxxxx/.aws/config
+
+# AWS profile to connect as defined in aws_credential_file.
+aws_credential_profile: default
+
+# Number of goroutines to run in parallel which will delete unused volumes.
+no_of_executer: 6
+
+# In seconds. Volumes in available state which are older than this duration will be deleted.
+duration: 0
+
+# Log location
+log_location: /tmp/deletesnapshots.log
