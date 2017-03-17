@@ -2,7 +2,8 @@ package main
 
 import (
 	"flag"
-	"fmt"
+	"io/ioutil"
+	"log"
 	"os"
 	"time"
 
@@ -10,76 +11,109 @@ import (
 	"github.com/aws/aws-sdk-go/aws/credentials"
 	"github.com/aws/aws-sdk-go/aws/session"
 	"github.com/aws/aws-sdk-go/service/ec2"
+	"gopkg.in/yaml.v2"
+)
+
+//YAMLConfig .. Structure of YAMLConfig type to read yaml data.
+type YAMLConfig struct {
+	Aws_region             string
+	Aws_credential_file    string
+	Aws_credential_profile string
+	No_of_executer         int
+	Duration               int
+	Aws_account_id         string
+	Dryrun                 bool
+	Log_location           string
+}
+
+var (
+	Log        *log.Logger
+	yamlconfig YAMLConfig
 )
 
 //WorkerPool .. This function will create worker pool of go routines. It takes data from jobs channel and
 //assignes it to a goroutine. Once the task is done by the goroutine, the result is written to results
 //channel. Number of goroutine in the worker pool is controlled by the calling function, i.e. main() here.
-func WorkerPool(id int, jobs <-chan string, results chan<- string, svc *ec2.EC2) {
+func WorkerPool(id int, jobs <-chan string, results chan<- string, svc *ec2.EC2, DryRun bool) {
 	for j := range jobs {
-		fmt.Println("Goroutine id", id, "removing snapshot id.", j)
-		DeleteUnusedVolumes(j, svc)
+		Log.Println("Goroutine id", id, "removing snapshot id.", j)
+		DeleteUnusedVolumes(j, svc, DryRun)
 		results <- j
 	}
 }
 
 //DeleteUnusedVolumes .. Code to remove ebs volumes
-func DeleteUnusedVolumes(volumeID string, svc *ec2.EC2) {
-
+func DeleteUnusedVolumes(volumeID string, svc *ec2.EC2, DryRun bool) {
 	params := &ec2.DeleteVolumeInput{
 		VolumeId: aws.String(volumeID),
-		//DryRun:   aws.Bool(true),
+		DryRun:   aws.Bool(DryRun),
 	}
 	_, err := svc.DeleteVolume(params)
 	if err != nil {
-		fmt.Println(err)
+		Log.Println(err.Error())
 	}
 
 }
 
 func main() {
-	const (
-		awsRegion            = "ap-southeast-1"
-		awsCredentialFile    = "/root/.aws/config"
-		awsCredentialProfile = "default"
-	)
-
-	var duration = flag.Int("duration", 604800, "In seconds. Available volumes older than this duration will be terminated")
-	var executer = flag.Int("executer", 4, "Number of goroutines to run in a worker pool. By default, running 4 goroutines")
+	var config = flag.String("config", "config.yaml", "Config file path. Please copy the config.yaml to the appropriate path.")
 	flag.Parse()
-	delta := int64(*duration)
+
+	//Parsing yaml data
+	source, FileErr := ioutil.ReadFile(*config)
+	if FileErr != nil {
+		panic(FileErr)
+	}
+	FileErr = yaml.Unmarshal(source, &yamlconfig)
+	if FileErr != nil {
+		panic(FileErr)
+	}
+	DryRun := yamlconfig.Dryrun
+	AWSRegion := yamlconfig.Aws_region
+	AWSCredentialFile := yamlconfig.Aws_credential_file
+	AWSCredentialProfile := yamlconfig.Aws_credential_profile
+	NoOfExecuter := yamlconfig.No_of_executer
+	Duration := yamlconfig.Duration
+	LogLocation := yamlconfig.Log_location
+
+	// Setting up log path.
+	file, FileErr := os.Create(LogLocation)
+	if FileErr != nil {
+		panic(FileErr)
+	}
+	Log = log.New(file, "", log.LstdFlags|log.Lshortfile)
+
+	delta := int64(Duration)
 	t := time.Now().Unix()
 
 	//Load aws iam credentials
-	creds := credentials.NewSharedCredentials(awsCredentialFile, awsCredentialProfile)
+	creds := credentials.NewSharedCredentials(AWSCredentialFile, AWSCredentialProfile)
 	_, err := creds.Get()
 	if err != nil {
-		fmt.Println(err)
-		os.Exit(1)
+		panic(err)
 	}
 
 	// Create an EC2 service object
 	svc := ec2.New(session.New(), &aws.Config{
-		Region:      aws.String(awsRegion),
+		Region:      aws.String(AWSRegion),
 		Credentials: creds,
 	})
 
 	resp, err := svc.DescribeVolumes(nil)
 	if err != nil {
-		fmt.Println(err)
-		os.Exit(1)
+		panic(err)
 	}
 
 	//Creating worker job pool. Number of goroutines to run is configured by -executer command line parameter.
 	jobs := make(chan string)
 	results := make(chan string)
-	for w := 1; w <= *executer; w++ {
-		go WorkerPool(w, jobs, results, svc)
+	for w := 1; w <= NoOfExecuter; w++ {
+		go WorkerPool(w, jobs, results, svc, DryRun)
 	}
 
 	for _, volume := range resp.Volumes {
 		if t-volume.CreateTime.Unix() > delta && *volume.State == "available" {
-			fmt.Println("Trying to remove volume ", *volume.CreateTime, *volume.VolumeId, *volume.AvailabilityZone, *volume.State)
+			Log.Println("Trying to remove volume ", *volume.CreateTime, *volume.VolumeId, *volume.AvailabilityZone, *volume.State)
 			go func(volume *ec2.Volume) {
 				jobs <- *volume.VolumeId
 			}(volume)
