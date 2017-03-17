@@ -17,15 +17,15 @@ import (
 
 //YAMLConfig .. Structure of YAMLConfig type to read yaml data.
 type YAMLConfig struct {
-	Exclude_ami            []string
-	Aws_region             string
-	Aws_credential_file    string
-	Aws_credential_profile string
-	No_of_executer         int
-	Duration               int
-	Aws_account_id         string
-	Dryrun                 bool
-	Log_location           string
+	ExcludeAMI           []string `yaml:"exclude_ami"`
+	AWSRegion            string   `yaml:"aws_region"`
+	AWSCredentialFile    string   `yaml:"aws_credential_file"`
+	AWSCredentialProfile string   `yaml:"aws_credential_profile"`
+	NoOfExecuter         int      `yaml:"no_of_executer"`
+	Duration             int      `yaml:"duration"`
+	AWSAccountID         string   `yaml:"aws_account_id"`
+	Dryrun               bool     `yaml:"dryrun"`
+	LogLocation          string   `yaml:"log_location"`
 }
 
 var (
@@ -60,7 +60,7 @@ func DeregisterAmi(amiID string, svc *ec2.EC2, DryRun bool) {
 
 //AmiCheck .. Returns true if the ami id is in the exclusion list (in the yaml).
 func AmiCheck(AmiID string, yamlconfig YAMLConfig) bool {
-	for _, b := range yamlconfig.Exclude_ami {
+	for _, b := range yamlconfig.ExcludeAMI {
 		if b == AmiID {
 			return true
 		}
@@ -82,13 +82,13 @@ func main() {
 		panic(FileErr)
 	}
 	DryRun := yamlconfig.Dryrun
-	AWSRegion := yamlconfig.Aws_region
-	AWSCredentialFile := yamlconfig.Aws_credential_file
-	AWSCredentialProfile := yamlconfig.Aws_credential_profile
-	NoOfExecuter := yamlconfig.No_of_executer
+	AWSRegion := yamlconfig.AWSRegion
+	AWSCredentialFile := yamlconfig.AWSCredentialFile
+	AWSCredentialProfile := yamlconfig.AWSCredentialProfile
+	NoOfExecuter := yamlconfig.NoOfExecuter
 	Duration := yamlconfig.Duration
-	AWSAccountID := yamlconfig.Aws_account_id
-	LogLocation := yamlconfig.Log_location
+	AWSAccountID := yamlconfig.AWSAccountID
+	LogLocation := yamlconfig.LogLocation
 
 	// Setting up log path.
 	file, FileErr := os.Create(LogLocation)
